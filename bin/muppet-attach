@@ -1,0 +1,104 @@
+#!/bin/bash
+# muppet-attach — List running muppets across all hosts and attach to one
+#
+# Scans all configured hosts for muppet-* tmux sessions.
+# Usage: muppet-attach [host]
+#   If host is given, only checks that host.
+#   Otherwise checks all known hosts.
+
+# Add hosts here as muppet infrastructure expands
+# "local" is a special keyword meaning this machine (krodesktop)
+ALL_HOSTS="local krobot cssp 123p"
+
+if [ -n "$1" ]; then
+    HOSTS="$1"
+else
+    HOSTS="$ALL_HOSTS"
+fi
+
+declare -a all_names
+declare -a all_hosts
+declare -a all_started
+i=1
+
+for host in $HOSTS; do
+    if [ "$host" = "local" ]; then
+        sessions=$(tmux list-sessions -F "#{session_name}|#{session_created}|#{session_windows}" 2>/dev/null | grep "^muppet-")
+
+        if [ -z "$sessions" ]; then
+            continue
+        fi
+
+        while IFS='|' read -r name created windows; do
+            started=$(date -d @$created '+%Y-%m-%d %H:%M:%S' 2>/dev/null)
+            all_names+=("$name")
+            all_hosts+=("local")
+            all_started+=("$started")
+            i=$((i + 1))
+        done <<< "$sessions"
+    else
+        # Check host is reachable (short timeout)
+        if ! ssh -o ConnectTimeout=3 "$host" true 2>/dev/null; then
+            continue
+        fi
+
+        sessions=$(ssh -o ConnectTimeout=3 "$host" 'tmux list-sessions -F "#{session_name}|#{session_created}|#{session_windows}" 2>/dev/null | grep "^muppet-"' 2>/dev/null)
+
+        if [ -z "$sessions" ]; then
+            continue
+        fi
+
+        while IFS='|' read -r name created windows; do
+            started=$(ssh -o ConnectTimeout=3 "$host" "date -d @$created '+%Y-%m-%d %H:%M:%S'" 2>/dev/null)
+            all_names+=("$name")
+            all_hosts+=("$host")
+            all_started+=("$started")
+            i=$((i + 1))
+        done <<< "$sessions"
+    fi
+done
+
+count=${#all_names[@]}
+
+if [ "$count" -eq 0 ]; then
+    echo "No muppets currently running on: $HOSTS"
+    exit 0
+fi
+
+echo "=== Running Muppets ==="
+echo ""
+
+for ((j=0; j<count; j++)); do
+    echo "  $((j+1))) ${all_names[$j]}  @${all_hosts[$j]}  (started: ${all_started[$j]})"
+done
+
+echo ""
+
+attach_muppet() {
+    local name="$1" host="$2"
+    if [ "$host" = "local" ]; then
+        echo "Attaching to $name (local)..."
+        if [ -n "$TMUX" ]; then
+            # Run as nested client — detach (Ctrl-b d) returns to outer session
+            env -u TMUX tmux attach -t "$name"
+        else
+            exec tmux attach -t "$name"
+        fi
+    else
+        echo "Attaching to $name on $host..."
+        exec ssh -t "$host" "tmux attach -t $name"
+    fi
+}
+
+if [ "$count" -eq 1 ]; then
+    attach_muppet "${all_names[0]}" "${all_hosts[0]}"
+else
+    read -p "Select muppet [1-$count]: " choice
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$count" ]; then
+        idx=$((choice - 1))
+        attach_muppet "${all_names[$idx]}" "${all_hosts[$idx]}"
+    else
+        echo "Invalid selection."
+        exit 1
+    fi
+fi

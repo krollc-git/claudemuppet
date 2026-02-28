@@ -6,22 +6,20 @@ A **muppet** is a Claude Code agent that acts as an engineering lead. You give i
 
 The key difference from other multi-agent frameworks: **the orchestrator is an AI**, not you. You're the executive who says "go" and reviews outcomes. The muppet handles decomposition, delegation, failure recovery, and progress tracking autonomously.
 
+## Install
+
+See [INSTALL.md](INSTALL.md) for full setup instructions.
+
+Quick version: install prerequisites (Claude Code, beads, tmux), then `./bin/muppet-setup`.
+
 ## Quick Start
 
 ```bash
-git clone <this-repo> ~/claudemuppet
-cd ~/claudemuppet
-./bin/muppet-setup
-```
+# Start Claude Code in tmux
+tmux-claude
 
-The setup script installs prerequisites, enables Agent Teams, and symlinks the launch scripts. Then:
-
-```bash
-# Launch a muppet on a remote host
-muppet-launch krobot my-task prompts/my-task.txt ~/project
-
-# Launch locally
-muppet-launch local my-task prompts/my-task.txt ~/project
+# Launch a muppet
+muppet-launch local my-task prompts/my-task.txt ~/my-project
 
 # Attach to a running muppet
 muppet-attach

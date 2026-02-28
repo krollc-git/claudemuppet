@@ -59,7 +59,7 @@ It's a methodology, not software. The "code" is just configuration files and pro
 - Higher token usage (each teammate = full Claude instance)
 
 **Verified on:**
-- krobot (192.168.1.100): Claude Code 2.1.47 installed at `~/.local/bin/claude`, Agent Teams enabled in settings.json, OAuth credentials copied from krodesktop
+- krobot: Claude Code 2.1.47 installed at `~/.local/bin/claude`, Agent Teams enabled in settings.json
 - krodesktop: Claude Code 2.1.47 at `~/.local/bin/claude`
 
 ## Governance Rules

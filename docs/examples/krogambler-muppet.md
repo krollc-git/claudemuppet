@@ -90,7 +90,7 @@ Same architecture as krotrader muppet — see `krotrader-muppet.md` for full det
 - Fast backtests (seconds, not minutes) make this ideal for agent teams — teammates can test many approaches in parallel
 
 ## Infrastructure
-- krobot: 192.168.1.100, AMD 9600X 12-core, 30GB RAM, Ubuntu 24.04
+- krobot: remote host, AMD 9600X 12-core, 30GB RAM, Ubuntu 24.04
 - Python deps: requests, numpy, scipy (already installed)
 - Data: ESPN API, MoneyPuck CSVs, SQLite databases
 

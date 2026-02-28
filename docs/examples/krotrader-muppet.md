@@ -195,7 +195,7 @@ This is more like a committee of managers with different perspectives negotiatin
 Each teammate is a full Claude Code session. 5 teammates running in parallel burns 5x tokens. On a Max subscription burning the overnight budget this is fine, but worth monitoring on first few runs.
 
 ## Infrastructure
-- krobot: 192.168.1.100, AMD 9600X 12-core, 30GB RAM, Ubuntu 24.04
+- krobot: remote host, AMD 9600X 12-core, 30GB RAM, Ubuntu 24.04
 - User has tmux launcher infrastructure already (muppet-launch, muppet-attach)
 - yfinance for historical data (already installed)
 - numpy, pandas, scipy already available

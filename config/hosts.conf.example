@@ -1,0 +1,12 @@
+# Muppet hosts configuration
+# List SSH host aliases where muppets can run, one per line.
+# "local" is a special keyword meaning this machine.
+# Lines starting with # are comments, blank lines are ignored.
+#
+# Example:
+# local
+# krobot
+# cssp
+# 123p
+
+local

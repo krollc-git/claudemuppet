@@ -6,9 +6,21 @@
 #   If host is given, only checks that host.
 #   Otherwise checks all known hosts.
 
-# Add hosts here as muppet infrastructure expands
-# "local" is a special keyword meaning this machine (krodesktop)
-ALL_HOSTS="local krobot cssp 123p"
+# Load hosts from (in priority order):
+#   1. MUPPET_HOSTS environment variable
+#   2. config/hosts.conf (relative to this script's repo)
+#   3. Default: "local"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+HOSTS_CONF="$REPO_DIR/config/hosts.conf"
+
+if [ -n "$MUPPET_HOSTS" ]; then
+    ALL_HOSTS="$MUPPET_HOSTS"
+elif [ -f "$HOSTS_CONF" ]; then
+    ALL_HOSTS=$(grep -v '^\s*#' "$HOSTS_CONF" | grep -v '^\s*$' | tr '\n' ' ')
+else
+    ALL_HOSTS="local"
+fi
 
 if [ -n "$1" ]; then
     HOSTS="$1"

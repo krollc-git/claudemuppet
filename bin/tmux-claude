@@ -1,0 +1,25 @@
+#!/bin/bash
+# tmux-claude — Start Claude Code in a tmux session
+#
+# Usage: tmux-claude [session-name] [workdir]
+#   session-name: tmux session name (default: "claude")
+#   workdir:      working directory (default: current directory)
+#
+# If the session already exists, attaches to it.
+
+set -e
+
+SESSION="${1:-claude}"
+WORKDIR="${2:-$(pwd)}"
+
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+    echo "Session '$SESSION' already exists. Attaching..."
+    if [ -n "$TMUX" ]; then
+        env -u TMUX tmux attach -t "$SESSION"
+    else
+        exec tmux attach -t "$SESSION"
+    fi
+    exit 0
+fi
+
+exec tmux new-session -s "$SESSION" "cd '$WORKDIR' && claude"

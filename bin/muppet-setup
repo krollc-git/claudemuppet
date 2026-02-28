@@ -1,0 +1,146 @@
+#!/bin/bash
+# muppet-setup — Set up the muppet framework on this machine
+#
+# Usage: muppet-setup [--check-only]
+#   --check-only: Just check prerequisites, don't install anything
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+CHECK_ONLY=false
+
+if [ "$1" = "--check-only" ]; then
+    CHECK_ONLY=true
+fi
+
+ok() { echo "  ✓ $1"; }
+fail() { echo "  ✗ $1"; }
+info() { echo "  → $1"; }
+
+echo "=== Muppet Framework Setup ==="
+echo ""
+
+ERRORS=0
+
+# 1. Check Claude Code
+echo "[1/6] Claude Code"
+if command -v claude &>/dev/null; then
+    ok "claude found: $(claude --version 2>/dev/null || echo 'installed')"
+else
+    fail "claude not found. Install Claude Code first."
+    ERRORS=$((ERRORS + 1))
+fi
+
+# 2. Check beads
+echo "[2/6] Beads (bd)"
+if command -v bd &>/dev/null; then
+    ok "bd found: $(bd version 2>/dev/null || echo 'installed')"
+else
+    fail "bd not found. Install beads: https://github.com/steveyegge/beads"
+    ERRORS=$((ERRORS + 1))
+fi
+
+# 3. Check tmux
+echo "[3/6] tmux"
+if command -v tmux &>/dev/null; then
+    ok "tmux found: $(tmux -V 2>/dev/null)"
+else
+    fail "tmux not found. Install with: sudo apt install tmux"
+    ERRORS=$((ERRORS + 1))
+fi
+
+if [ "$CHECK_ONLY" = true ]; then
+    echo ""
+    if [ "$ERRORS" -gt 0 ]; then
+        echo "$ERRORS prerequisite(s) missing. Install them and re-run."
+        exit 1
+    else
+        echo "All prerequisites met. Run without --check-only to install."
+        exit 0
+    fi
+fi
+
+if [ "$ERRORS" -gt 0 ]; then
+    echo ""
+    echo "$ERRORS prerequisite(s) missing. Install them first."
+    exit 1
+fi
+
+# 4. Run bd setup claude (installs Claude Code hooks for beads)
+echo "[4/6] Beads Claude hooks"
+if bd setup claude 2>/dev/null; then
+    ok "bd setup claude completed"
+else
+    info "bd setup claude had issues (may already be configured)"
+fi
+
+# 5. Enable Agent Teams in ~/.claude/settings.json
+echo "[5/6] Agent Teams"
+SETTINGS_FILE="$HOME/.claude/settings.json"
+if [ -f "$SETTINGS_FILE" ]; then
+    if grep -q "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" "$SETTINGS_FILE" 2>/dev/null; then
+        ok "Agent Teams already enabled in $SETTINGS_FILE"
+    else
+        # Merge the env setting into existing file
+        if command -v python3 &>/dev/null; then
+            python3 -c "
+import json
+with open('$SETTINGS_FILE') as f:
+    data = json.load(f)
+env = data.get('env', {})
+env['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] = '1'
+data['env'] = env
+with open('$SETTINGS_FILE', 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+"
+            ok "Agent Teams enabled in $SETTINGS_FILE"
+        else
+            fail "Cannot update settings.json (python3 not found). Add manually:"
+            info '  "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" }'
+        fi
+    fi
+else
+    mkdir -p "$HOME/.claude"
+    echo '{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}' > "$SETTINGS_FILE"
+    ok "Created $SETTINGS_FILE with Agent Teams enabled"
+fi
+
+# 6. Symlink scripts to ~/bin/
+echo "[6/6] Symlinks"
+mkdir -p "$HOME/bin"
+for script in muppet-launch muppet-attach tmux-claude; do
+    SRC="$REPO_DIR/bin/$script"
+    DST="$HOME/bin/$script"
+    if [ -L "$DST" ] && [ "$(readlink "$DST")" = "$SRC" ]; then
+        ok "$script already symlinked"
+    elif [ -e "$DST" ]; then
+        info "$DST exists (not a symlink to this repo). Skipping."
+    else
+        ln -s "$SRC" "$DST"
+        ok "$script → $DST"
+    fi
+done
+
+# Create default hosts.conf if missing
+HOSTS_CONF="$REPO_DIR/config/hosts.conf"
+if [ ! -f "$HOSTS_CONF" ]; then
+    cp "$REPO_DIR/config/hosts.conf.example" "$HOSTS_CONF"
+    ok "Created config/hosts.conf (default: local only)"
+else
+    ok "config/hosts.conf already exists"
+fi
+
+echo ""
+echo "=== Setup Complete ==="
+echo ""
+echo "Next steps:"
+echo "  1. Edit config/hosts.conf to add your SSH hosts"
+echo "  2. Create a prompt:  cp prompts/TEMPLATE.txt prompts/my-task.txt"
+echo "  3. Launch a muppet:  muppet-launch local my-task prompts/my-task.txt ~/project"
+echo "  4. Attach:           muppet-attach"
